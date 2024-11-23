@@ -14,6 +14,6 @@ func main() {
 	router := mux.NewRouter()
 
 	createEndpoint(router)
-	auth.CreateDiscordAuthEndpoints(router)
+	auth.DiscordConfig(router)
 	http.ListenAndServe(":80", router)
 }
