@@ -18,11 +18,12 @@ func ConnectToDatabase() *sql.DB { // This function only establishes sql.DB obje
 	// Awful declaration but works
 	//db, err := sql.Open("mysql", os.Getenv("DB_USER")+":"+os.Getenv("DB_PASS")+"@("+os.Getenv("DB_IP")+":"+os.Getenv("DB_PORT")+")/"+os.Getenv("DB_NAME"))
 	cfg := mysql.Config{
-		User:   os.Getenv("DB_USER"),
-		Passwd: os.Getenv("DB_PASS"),
-		Net:    "tcp",
-		Addr:   os.Getenv("DB_IP") + ":" + os.Getenv("DB_PORT"),
-		DBName: os.Getenv("DB_NAME"),
+		User:                 os.Getenv("DB_USER"),
+		Passwd:               os.Getenv("DB_PASS"),
+		Net:                  "tcp",
+		Addr:                 os.Getenv("DB_IP") + ":" + os.Getenv("DB_PORT"),
+		DBName:               os.Getenv("DB_NAME"),
+		AllowNativePasswords: true,
 	}
 	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {

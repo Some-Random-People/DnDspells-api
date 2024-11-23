@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func NamesAndId(router *mux.Router, db *sql.DB) {
+func SearchLists(router *mux.Router, db *sql.DB) {
 
 	router.HandleFunc("/api/search/ids", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
