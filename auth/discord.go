@@ -3,21 +3,19 @@ package auth
 import (
 	"bytes"
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 )
 
@@ -32,6 +30,7 @@ func pad(data []byte, blockSize int) []byte {
 	padText := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(data, padText...)
 }
+
 func generateStateToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -40,31 +39,21 @@ func generateStateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func encryptToken(token []byte) (string, error) {
+func createJWT(identifier string) (string, error) {
 	secret := os.Getenv("SECRET")
-	block, err := aes.NewCipher([]byte(secret))
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	claims := jwtToken.Claims.(jwt.MapClaims)
+	claims["exp"] = time.Now().Add(168 * time.Hour)
+	claims["identifier"] = identifier
+	claims["method"] = "discord"
+	stringToken, err := jwtToken.SignedString([]byte(secret))
 	if err != nil {
 		return "", err
 	}
-	iv := make([]byte, aes.BlockSize)
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
-	}
-	cbc := cipher.NewCBCEncrypter(block, iv)
-
-	paddedToken := pad(token, aes.BlockSize)
-
-	encrypted := make([]byte, len(paddedToken))
-
-	cbc.CryptBlocks(encrypted, paddedToken)
-	return hex.EncodeToString(append(iv, encrypted...)), nil
+	return stringToken, nil
 }
 
-func DiscordConfig(router *mux.Router) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error while loading .env file")
-	}
+func DiscordConfig(router *mux.Router, db *sql.DB) {
 	var store = sessions.NewCookieStore([]byte(os.Getenv("COOKIE")))
 	authConf := &oauth2.Config{
 		RedirectURL:  "http://127.0.0.1:80/api/auth/redirect",
@@ -92,13 +81,13 @@ func DiscordConfig(router *mux.Router) {
 			return
 		}
 
-		token, err := authConf.Exchange(context.Background(), r.FormValue("code"))
+		discordToken, err := authConf.Exchange(context.Background(), r.FormValue("code"))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Println(err)
 			return
 		}
-		res, err := authConf.Client(context.Background(), token).Get("https://discord.com/api/users/@me")
+		res, err := authConf.Client(context.Background(), discordToken).Get("https://discord.com/api/users/@me")
 
 		if err != nil || res.StatusCode != 200 {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -109,19 +98,47 @@ func DiscordConfig(router *mux.Router) {
 			}
 			return
 		}
-		tokenJSON, err := json.Marshal(token)
+
+		defer res.Body.Close()
+
+		body, err := io.ReadAll(res.Body)
+
 		if err != nil {
-			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Print(err)
 			return
 		}
-		accessToken, err := encryptToken(tokenJSON)
+
+		identifier := ""
+		var (
+			count int
+		)
+		rows, err := db.Query("SELECT COUNT(*) FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			if err := rows.Scan(&count); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		/*if count == 0 {
+		    usersInsert, err := db.Prepare("INSERT INTO users(nickname)")
+		    if err != nil {
+		        log.Fatal(err)
+		    }
+		    res, err := usersInsert.Exec("")
+		}*/
+
+		jwtToken, err := createJWT(identifier)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println(accessToken)
 		cookie := http.Cookie{
 			Name:     "accessToken",
-			Value:    accessToken,
+			Value:    jwtToken,
 			Path:     "/",
 			MaxAge:   604800,
 			HttpOnly: true,
@@ -129,6 +146,7 @@ func DiscordConfig(router *mux.Router) {
 		}
 		http.SetCookie(w, &cookie)
 
-		fmt.Fprint(w, "Registered")
+		//fmt.Fprint(w, body)
+		w.Write(body)
 	})
 }
