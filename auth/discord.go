@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -23,12 +23,6 @@ var discordEndpoints = oauth2.Endpoint{
 	AuthURL:   "https://discord.com/api/oauth2/authorize",
 	TokenURL:  "https://discord.com/api/oauth2/token",
 	AuthStyle: oauth2.AuthStyleInParams,
-}
-
-func pad(data []byte, blockSize int) []byte {
-	padding := blockSize - len(data)%blockSize
-	padText := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(data, padText...)
 }
 
 func generateStateToken() (string, error) {
@@ -108,29 +102,69 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 			log.Print(err)
 			return
 		}
+		var userData map[string]interface{}
+		err = json.Unmarshal(body, &userData)
+		if err != nil {
+			log.Print(err)
+			return
+		}
 
-		identifier := ""
-		var (
-			count int
-		)
-		rows, err := db.Query("SELECT COUNT(*) FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
+		identifier := userData["id"].(string)
+		var userId int
+		rows, err := db.Query("SELECT user_id FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer rows.Close()
 		for rows.Next() {
-			if err := rows.Scan(&count); err != nil {
+			if err := rows.Scan(&userId); err != nil {
 				log.Fatal(err)
 			}
 		}
+		if userId == 0 {
+			var count int
+			username := userData["username"].(string)
+			rows, err := db.Query("SELECT COUNT(*) FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer rows.Close()
+			for rows.Next() {
+				if err := rows.Scan(&count); err != nil {
+					log.Fatal(err)
+				}
+			}
+			usersInsert, err := db.Prepare("INSERT INTO users(nickname) VALUES (?)")
+			if err != nil {
+				log.Fatal(err)
+			}
+			var (
+				res sql.Result
+			)
+			if count == 0 {
+				res, err = usersInsert.Exec(username)
+			} else {
+				res, err = usersInsert.Exec(username + string(time.Now().Unix()))
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			methodInsert, err := db.Prepare("INSERT INTO external_user_id(user_id, external_method, token) VALUES (?, 'discord', ?)")
+			if err != nil {
+				log.Fatal(err)
+			}
+			lastId, err := res.LastInsertId()
+			if err != nil {
+				log.Fatal()
+			}
+			userId = int(lastId)
+			_, err = methodInsert.Exec(lastId, identifier)
+			if err != nil {
+				log.Fatal()
+			}
+		} else {
 
-		/*if count == 0 {
-		    usersInsert, err := db.Prepare("INSERT INTO users(nickname)")
-		    if err != nil {
-		        log.Fatal(err)
-		    }
-		    res, err := usersInsert.Exec("")
-		}*/
+		}
 
 		jwtToken, err := createJWT(identifier)
 		if err != nil {
@@ -145,8 +179,6 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 			Secure:   true,
 		}
 		http.SetCookie(w, &cookie)
-
-		//fmt.Fprint(w, body)
-		w.Write(body)
+		http.Redirect(w, r, "http://127.0.0.1/", http.StatusPermanentRedirect)
 	})
 }
