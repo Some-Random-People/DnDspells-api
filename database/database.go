@@ -7,16 +7,12 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 )
 
 func ConnectToDatabase() *sql.DB { // This function only establishes sql.DB object, verifies it and returns it
-	err := godotenv.Load() // Check for .env errors
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	// Awful declaration but works
-	//db, err := sql.Open("mysql", os.Getenv("DB_USER")+":"+os.Getenv("DB_PASS")+"@("+os.Getenv("DB_IP")+":"+os.Getenv("DB_PORT")+")/"+os.Getenv("DB_NAME"))
+
+	// Changed to plugin for DSN, looks better
+
 	cfg := mysql.Config{
 		User:                 os.Getenv("DB_USER"),
 		Passwd:               os.Getenv("DB_PASS"),
@@ -25,6 +21,7 @@ func ConnectToDatabase() *sql.DB { // This function only establishes sql.DB obje
 		DBName:               os.Getenv("DB_NAME"),
 		AllowNativePasswords: true,
 	}
+
 	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		log.Fatal(err)
