@@ -37,7 +37,7 @@ func createJWT(identifier string) (string, error) {
 	secret := os.Getenv("SECRET")
 	jwtToken := jwt.New(jwt.SigningMethodHS256)
 	claims := jwtToken.Claims.(jwt.MapClaims)
-	claims["exp"] = time.Now().Add(168 * time.Hour)
+	claims["exp"] = time.Now().Add(168 * time.Hour).Unix()
 	claims["identifier"] = identifier
 	claims["method"] = "discord"
 	stringToken, err := jwtToken.SignedString([]byte(secret))
@@ -48,6 +48,7 @@ func createJWT(identifier string) (string, error) {
 }
 
 func DiscordConfig(router *mux.Router, db *sql.DB) {
+	// Setting up oAuth2 config
 	var store = sessions.NewCookieStore([]byte(os.Getenv("COOKIE")))
 	authConf := &oauth2.Config{
 		RedirectURL:  "http://127.0.0.1:80/api/auth/redirect",
@@ -57,10 +58,11 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 		Endpoint:     discordEndpoints,
 	}
 
+	// Creating endpoint for redirecting to discord auth
 	router.HandleFunc("/api/auth/discord", func(w http.ResponseWriter, r *http.Request) {
 		state, err := generateStateToken()
 		if err != nil {
-			log.Fatal("Error with status token generation!")
+			log.Fatal("Error with state token generation!")
 		}
 		session, _ := store.Get(r, "auth-session")
 		session.Values["state"] = state
@@ -68,7 +70,9 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 		http.Redirect(w, r, authConf.AuthCodeURL(state), http.StatusTemporaryRedirect)
 	})
 
+	// Creating endpoint for signing in after discord authentication
 	router.HandleFunc("/api/auth/redirect", func(w http.ResponseWriter, r *http.Request) {
+		// Checking if state token is valid
 		authSession, _ := store.Get(r, "auth-session")
 		if r.FormValue("state") != authSession.Values["state"] {
 			w.WriteHeader(http.StatusBadRequest)
@@ -81,6 +85,8 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 			log.Println(err)
 			return
 		}
+
+		// Asking for user data
 		res, err := authConf.Client(context.Background(), discordToken).Get("https://discord.com/api/users/@me")
 
 		if err != nil || res.StatusCode != 200 {
@@ -109,6 +115,7 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 			return
 		}
 
+		// Saving user data to database
 		identifier := userData["id"].(string)
 		var userId int
 		rows, err := db.Query("SELECT user_id FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
