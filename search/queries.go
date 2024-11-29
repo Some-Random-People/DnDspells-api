@@ -116,10 +116,10 @@ func Misc(db *sql.DB) string {
 		dur []string
 	)
 
-	castingTime(db, &ct)
-	spellRange(db, &rn)
-	components(db, &cmp)
-	duration(db, &dur)
+	castingTime(db, &ct) // ct - Casting Time
+	spellRange(db, &rn)  // rn - Range
+	components(db, &cmp) // cmp - Components
+	duration(db, &dur)   // dur - Duration
 
 	type jason struct {
 		CastingTime []string
@@ -142,6 +142,8 @@ func Misc(db *sql.DB) string {
 
 	return string(jsonBytes)
 }
+
+// Everything below is for "Misc" function
 
 func spellRange(db *sql.DB, rn *[]string) {
 
