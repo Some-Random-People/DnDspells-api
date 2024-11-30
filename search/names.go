@@ -149,6 +149,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			queryData.upcast = false
 		}
 
-		log.Println(queryData)
+		//log.Println(queryData)
+		fmt.Fprint(w, string(DataQuery(db)))
 	})
 }
