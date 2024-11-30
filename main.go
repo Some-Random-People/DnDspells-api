@@ -8,6 +8,7 @@ import (
 	"github.com/some-random-people/dndspells-api/auth"
 	"github.com/some-random-people/dndspells-api/database"
 	"github.com/some-random-people/dndspells-api/search"
+	"github.com/some-random-people/dndspells-api/user"
 
 	"github.com/gorilla/mux"
 )
@@ -25,5 +26,6 @@ func main() {
 	createEndpoint(router)
 	auth.DiscordConfig(router, db)
 	search.SearchLists(router, db)
+	user.CreateUserSpellsEndpoints(router, db)
 	http.ListenAndServe(":80", router)
 }

@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -39,7 +40,6 @@ func createJWT(identifier string) (string, error) {
 	claims := jwtToken.Claims.(jwt.MapClaims)
 	claims["exp"] = time.Now().Add(168 * time.Hour).Unix()
 	claims["identifier"] = identifier
-	claims["method"] = "discord"
 	stringToken, err := jwtToken.SignedString([]byte(secret))
 	if err != nil {
 		return "", err
@@ -162,18 +162,15 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 			}
 			lastId, err := res.LastInsertId()
 			if err != nil {
-				log.Fatal()
+				log.Fatal(err)
 			}
 			userId = int(lastId)
 			_, err = methodInsert.Exec(lastId, identifier)
 			if err != nil {
-				log.Fatal()
+				log.Fatal(err)
 			}
-		} else {
-
 		}
-
-		jwtToken, err := createJWT(identifier)
+		jwtToken, err := createJWT(strconv.Itoa(userId))
 		if err != nil {
 			fmt.Println(err.Error())
 		}
