@@ -51,21 +51,21 @@ func ParseForm(toFill interface{}, request *http.Request) error {
 			fieldType := fieldValue.Type().Elem()
 			newValue := reflect.New(fieldType).Elem()
 
-			switch fieldValue.Kind() {
+			switch fieldType.Kind() {
 			case reflect.String:
 				newValue.SetString(value)
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				value, err := strconv.ParseInt(request.FormValue(tag), 10, 64)
+				intValue, err := strconv.ParseInt(request.FormValue(tag), 10, 64)
 				if err != nil {
 					return err
 				}
-				fieldValue.SetInt(value)
+				newValue.SetInt(intValue)
 			case reflect.Float32, reflect.Float64:
 				value, err := strconv.ParseFloat(request.FormValue(tag), 64)
 				if err != nil {
 					return err
 				}
-				fieldValue.SetFloat(value)
+				newValue.SetFloat(value)
 			}
 			fieldValue.Set(newValue.Addr())
 		}
