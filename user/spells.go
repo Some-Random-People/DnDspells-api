@@ -11,24 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/some-random-people/dndspells-api/auth"
+	"github.com/some-random-people/dndspells-api/dataStructs"
 	"github.com/some-random-people/dndspells-api/utils"
 )
-
-type UserSpell struct {
-	id          int
-	Name        string  `json:"name" form:"name"`
-	Level       *int    `json:"level" form:"level"`
-	School      *int    `json:"school" form:"school"`
-	IsRitual    *int    `json:"isRitual" form:"isRitual"`
-	CastingTime *string `json:"castingTime" form:"castingTime"`
-	SpellRange  *string `json:"spellRange" form:"spellRange"`
-	Components  *string `json:"components" form:"components"`
-	Duration    *string `json:"duration" form:"duration"`
-	Description *string `json:"description" form:"description"`
-	Upcast      *string `json:"upcast" form:"upcast"`
-	user_id     int
-	IsPublic    *int `json:"isPublic" form:"isPublic"`
-}
 
 func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 	// Creating new spell
@@ -40,10 +25,9 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 			fmt.Fprint(w, "Unauthorized")
 			return
 		}
-		var newSpell UserSpell
+		var newSpell dataStructs.UserSpell
 		contentType := r.Header.Get("Content-Type")
 		if strings.Contains(contentType, "multipart/form-data") || strings.Contains(contentType, "application/x-www-form-urlencoded") {
-			log.Println("multi")
 			err := utils.ParseForm(&newSpell, r)
 			if err != nil {
 				log.Println(err)
@@ -86,7 +70,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		var spell UserSpell
+		var spell dataStructs.UserSpell
 		rows, err := db.Query("SELECT `id`, `name`, `level`, `school`, `is_ritual`, `casting_time`, `range`, `components`, `duration`, `description`, `upcast`, `user_id`, `is_public` FROM user_spells WHERE id = ?", id)
 		if err != nil {
 			log.Fatal(err)
@@ -94,7 +78,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		defer rows.Close()
 		var exist = false
 		for rows.Next() {
-			if err := rows.Scan(&spell.id, &spell.Name, &spell.Level, &spell.School, &spell.IsRitual, &spell.CastingTime, &spell.SpellRange, &spell.Components, &spell.Duration, &spell.Description, &spell.Upcast, &spell.user_id, &spell.IsPublic); err != nil {
+			if err := rows.Scan(&spell.Id, &spell.Name, &spell.Level, &spell.School, &spell.IsRitual, &spell.CastingTime, &spell.SpellRange, &spell.Components, &spell.Duration, &spell.Description, &spell.Upcast, &spell.User_id, &spell.IsPublic); err != nil {
 				log.Fatal(err)
 			}
 			exist = true
@@ -120,7 +104,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 				fmt.Fprint(w, "Unauthorized")
 				return
 			}
-			if claims["identifier"] == strconv.Itoa(spell.user_id) {
+			if claims["identifier"] == strconv.Itoa(spell.User_id) {
 				response, err := json.Marshal(spell)
 				if err != nil {
 					log.Println(err)
