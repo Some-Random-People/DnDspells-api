@@ -25,6 +25,7 @@ func VerifyToken(tokenString string) (bool, jwt.MapClaims) {
 
 	if err != nil {
 		log.Printf("Token validation failed: %v\n", err)
+		return false, nil
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
