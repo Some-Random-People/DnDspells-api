@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/some-random-people/dndspells-api/dataStructs"
 )
 
 func SearchLists(router *mux.Router, db *sql.DB) {
@@ -33,21 +34,8 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 	})
 
 	router.HandleFunc("/api/spell/search/spell", func(w http.ResponseWriter, r *http.Request) {
-		type qd struct { // qd - Query data
-			id              int
-			source          int
-			level           int
-			school          int
-			isRitual        bool
-			castingTime     string // Predefined
-			rangeValueStart int
-			rangeValueStop  int
-			rangeType       string // Predefined OR feet OR mile
-			components      string // For reconsideration about selection REGEX FUCK ME
-			duration        string // Predefined
-			upcast          bool
-		}
-		var queryData qd
+
+		var queryData dataStructs.QueryData
 		castingTimesPre := []string{"1_action", "1_bonus_action", "1_hour", "1_minute", "1_reaction", "10_minutes", "12_hours", "24_hours", "8_hours"}
 		rangeTypePre := []string{"mile", "feet", "Self", "Sight", "Special", "Touch", "Unlimited"}
 		componentsPre := []string{"V", "S", "M", "VS", "VM", "VSM", "SM"}
@@ -58,7 +46,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with id conversion")
 			}
-			queryData.id = temp
+			queryData.Id = temp
 		}
 
 		if r.URL.Query().Get("source") != "" {
@@ -66,7 +54,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with source conversion")
 			}
-			queryData.source = temp
+			queryData.Source = temp
 		}
 
 		if r.URL.Query().Get("level") != "" {
@@ -74,7 +62,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with level conversion")
 			}
-			queryData.level = temp
+			queryData.Level = temp
 		}
 
 		if r.URL.Query().Get("school") != "" {
@@ -82,20 +70,20 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with school conversion")
 			}
-			queryData.school = temp
+			queryData.School = temp
 		}
 
 		if r.URL.Query().Get("isRitual") != "" {
-			queryData.isRitual = true
+			queryData.IsRitual = true
 		} else {
-			queryData.isRitual = false
+			queryData.IsRitual = false
 		}
 
 		if r.URL.Query().Get("castingTime") != "" {
 			temp := r.URL.Query().Get("castingTime")
 			for _, v := range castingTimesPre {
 				if v == temp {
-					queryData.castingTime = v
+					queryData.CastingTime = v
 				}
 			}
 		}
@@ -105,7 +93,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with rangeValueStart conversion")
 			}
-			queryData.rangeValueStart = temp
+			queryData.RangeValueStart = temp
 		}
 
 		if r.URL.Query().Get("rangeValueStop") != "" {
@@ -113,14 +101,14 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with rangeValueStop conversion")
 			}
-			queryData.rangeValueStop = temp
+			queryData.RangeValueStop = temp
 		}
 
 		if r.URL.Query().Get("rangeType") != "" {
 			temp := r.URL.Query().Get("rangeType")
 			for _, v := range rangeTypePre {
 				if v == temp {
-					queryData.rangeType = v
+					queryData.RangeType = v
 				}
 			}
 		}
@@ -129,7 +117,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			temp := r.URL.Query().Get("components")
 			for _, v := range componentsPre {
 				if v == temp {
-					queryData.components = v
+					queryData.Components = v
 				}
 			}
 		}
@@ -138,18 +126,22 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			temp := r.URL.Query().Get("duration")
 			for _, v := range durationPre {
 				if v == temp {
-					queryData.duration = v
+					queryData.Duration = v
 				}
 			}
 		}
 
 		if r.URL.Query().Get("upcast") != "" {
-			queryData.upcast = true
+			queryData.Upcast = true
 		} else {
-			queryData.upcast = false
+			queryData.Upcast = false
 		}
 
-		//log.Println(queryData)
-		fmt.Fprint(w, string(DataQuery(db)))
+		result, err := DataQuery(db, queryData)
+		if err != nil {
+			log.Println(err)
+		}
+
+		fmt.Fprint(w, string(result))
 	})
 }
