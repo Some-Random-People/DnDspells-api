@@ -48,6 +48,27 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 			fmt.Fprint(w, "Bad Request")
 			return
 		}
+
+		// Data integrity checks
+
+		if *newSpell.IsPublic != 0 && *newSpell.IsPublic != 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Bad Request")
+			return
+		}
+
+		if *newSpell.IsRitual != 0 && *newSpell.IsRitual != 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Bad Request")
+			return
+		}
+
+		if *newSpell.School < 1 || *newSpell.School > 8 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Bad Request")
+			return
+		}
+
 		spellInsert, err := db.Prepare("INSERT INTO user_spells(`name`, `level`, `school`, `is_ritual`, `casting_time`, `range`, `components`, `duration`, `description`, `upcast`, `is_public`, `user_id`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 		if err != nil {
 			log.Fatal(err)
