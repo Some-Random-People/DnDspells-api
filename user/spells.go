@@ -256,9 +256,8 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "Updated")
-	}).Methods("PUT")
+		w.WriteHeader(http.StatusNoContent)
+	}).Methods("PATCH")
 
 	// Getting spell
 	router.HandleFunc("/api/user/spell/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -380,8 +379,6 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "Delete successful")
+		w.WriteHeader(http.StatusNoContent)
 	}).Methods("DELETE")
 }
