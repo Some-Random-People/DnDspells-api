@@ -26,6 +26,10 @@ func ParseForm(toFill interface{}, request *http.Request) error {
 			continue
 		}
 
+		if request.FormValue(tag) == "" {
+			continue
+		}
+
 		switch fieldValue.Kind() {
 		case reflect.String:
 			fieldValue.SetString(request.FormValue(tag))
@@ -43,10 +47,6 @@ func ParseForm(toFill interface{}, request *http.Request) error {
 			fieldValue.SetFloat(value)
 		case reflect.Pointer:
 			value := request.FormValue(tag)
-
-			if value == "" {
-				continue
-			}
 
 			fieldType := fieldValue.Type().Elem()
 			newValue := reflect.New(fieldType).Elem()

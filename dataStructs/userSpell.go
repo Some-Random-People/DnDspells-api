@@ -1,7 +1,7 @@
 package dataStructs
 
 type UserSpell struct {
-	Id          int
+	Id          int     `json:"id" form:"id"`
 	Name        string  `json:"name" form:"name"`
 	Level       *int    `json:"level" form:"level"`
 	School      *int    `json:"school" form:"school"`
