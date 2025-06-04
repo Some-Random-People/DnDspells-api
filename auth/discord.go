@@ -62,7 +62,9 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/auth/discord", func(w http.ResponseWriter, r *http.Request) {
 		state, err := generateStateToken()
 		if err != nil {
-			log.Fatal("Error with state token generation!")
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		session, _ := store.Get(r, "auth-session")
 		session.Values["state"] = state
@@ -120,12 +122,16 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 		var userId int
 		rows, err := db.Query("SELECT user_id FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		for rows.Next() {
 			if err := rows.Scan(&userId); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 		}
 		if userId == 0 {
@@ -133,17 +139,23 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 			username := userData["username"].(string)
 			rows, err := db.Query("SELECT COUNT(*) FROM external_user_id WHERE external_method = 'discord' AND token = ?", identifier)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			defer rows.Close()
 			for rows.Next() {
 				if err := rows.Scan(&count); err != nil {
-					log.Fatal(err)
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
 				}
 			}
 			usersInsert, err := db.Prepare("INSERT INTO users(nickname) VALUES (?)")
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			var (
 				res sql.Result
@@ -154,20 +166,28 @@ func DiscordConfig(router *mux.Router, db *sql.DB) {
 				res, err = usersInsert.Exec(username + string(time.Now().Unix()))
 			}
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			methodInsert, err := db.Prepare("INSERT INTO external_user_id(user_id, external_method, token) VALUES (?, 'discord', ?)")
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			lastId, err := res.LastInsertId()
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			userId = int(lastId)
 			_, err = methodInsert.Exec(lastId, identifier)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 		}
 		jwtToken, err := createJWT(strconv.Itoa(userId))

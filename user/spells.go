@@ -74,15 +74,21 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 
 		spellInsert, err := db.Prepare("INSERT INTO user_spells(`name`, `level`, `school`, `is_ritual`, `casting_time`, `range`, `components`, `duration`, `description`, `upcast`, `is_public`, `user_id`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		res, err := spellInsert.Exec(newSpell.Name, newSpell.Level, newSpell.School, newSpell.IsRitual, newSpell.CastingTime, newSpell.SpellRange, newSpell.Components, newSpell.Duration, newSpell.Description, newSpell.Upcast, newSpell.IsPublic, claims["identifier"])
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		id, err := res.LastInsertId()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
@@ -119,13 +125,17 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		var user_id int
 		rows, err := db.Query("SELECT `user_id` FROM user_spells WHERE id = ?", &newSpell.Id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		var exist = false
 		for rows.Next() {
 			if err := rows.Scan(&user_id); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			exist = true
 		}
@@ -143,7 +153,9 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 
 		tx, err := db.Begin()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer tx.Rollback()
 
@@ -253,6 +265,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		err = tx.Commit()
 		if err != nil {
 			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -267,13 +280,17 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		var spell dataStructs.UserSpell
 		rows, err := db.Query("SELECT `id`, `name`, `level`, `school`, `is_ritual`, `casting_time`, `range`, `components`, `duration`, `description`, `upcast`, `user_id`, `is_public` FROM user_spells WHERE id = ?", id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		var exist = false
 		for rows.Next() {
 			if err := rows.Scan(&spell.Id, &spell.Name, &spell.Level, &spell.School, &spell.IsRitual, &spell.CastingTime, &spell.SpellRange, &spell.Components, &spell.Duration, &spell.Description, &spell.Upcast, &spell.User_id, &spell.IsPublic); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			exist = true
 		}
@@ -349,13 +366,17 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		var selectedSpell dataStructs.UserSpell
 		rows, err := db.Query("SELECT `id`, `user_id` FROM user_spells WHERE id = ?", strconv.Itoa(targetSpell.Id))
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		var exist = false
 		for rows.Next() {
 			if err := rows.Scan(&selectedSpell.Id, &selectedSpell.User_id); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			exist = true
 		}
@@ -373,11 +394,15 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 		}
 		spellInsert, err := db.Prepare("DELETE FROM user_spells WHERE id = ?")
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		_, err = spellInsert.Exec(targetSpell.Id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}).Methods("DELETE")

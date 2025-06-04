@@ -23,13 +23,17 @@ func CreateUserProfileEndpoints(router *mux.Router, db *sql.DB) {
 		var profile dataStructs.UserProfile
 		rows, err := db.Query("SELECT `id`, `nickname` FROM users WHERE id = ?", id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		var exist = false
 		for rows.Next() {
 			if err := rows.Scan(&profile.Id, &profile.Name); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			exist = true
 		}
@@ -56,14 +60,18 @@ func CreateUserProfileEndpoints(router *mux.Router, db *sql.DB) {
 		var spells []dataStructs.UserSpell
 		rows, err := db.Query("SELECT `id`, `name`, `level`, `school`, `is_ritual`, `casting_time`, `range`, `components`, `duration`, `description`, `upcast`, `user_id`, `is_public` FROM user_spells WHERE user_id = ? AND is_public = 1", id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		var exist = false
 		for rows.Next() {
 			var spell dataStructs.UserSpell
 			if err := rows.Scan(&spell.Id, &spell.Name, &spell.Level, &spell.School, &spell.IsRitual, &spell.CastingTime, &spell.SpellRange, &spell.Components, &spell.Duration, &spell.Description, &spell.Upcast, &spell.User_id, &spell.IsPublic); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			spells = append(spells, spell)
 			exist = true
@@ -106,7 +114,9 @@ func CreateUserProfileEndpoints(router *mux.Router, db *sql.DB) {
 		}
 		rows, err := db.Query("SELECT `nickname` FROM users WHERE nickname = ?", modifiedUser.Name)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		defer rows.Close()
 		var exist = false
