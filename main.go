@@ -27,5 +27,6 @@ func main() {
 	auth.DiscordConfig(router, db)
 	search.SearchLists(router, db)
 	user.CreateUserSpellsEndpoints(router, db)
+	user.CreateUserProfileEndpoints(router, db)
 	http.ListenAndServe(":80", router)
 }

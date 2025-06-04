@@ -130,7 +130,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 			exist = true
 		}
 		if exist == false {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Spell not found")
 			return
 		}
@@ -278,7 +278,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 			exist = true
 		}
 		if exist == false {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Spell not found")
 			return
 		}
@@ -360,7 +360,7 @@ func CreateUserSpellsEndpoints(router *mux.Router, db *sql.DB) {
 			exist = true
 		}
 		if exist == false {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Spell not found")
 			return
 		}
