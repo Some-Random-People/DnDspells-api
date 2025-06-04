@@ -35,9 +35,9 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 
 	router.HandleFunc("/api/spell/search/spell", func(w http.ResponseWriter, r *http.Request) {
 
+		w.Header().Add("Content-Type", "application/json")
 		var queryData dataStructs.QueryData
 		castingTimesPre := []string{"1_action", "1_bonus_action", "1_hour", "1_minute", "1_reaction", "10_minutes", "12_hours", "24_hours", "8_hours"}
-		rangeTypePre := []string{"mile", "feet", "Self", "Sight", "Special", "Touch", "Unlimited"}
 		componentsPre := []string{"V", "S", "M", "VS", "VM", "VSM", "SM"}
 		durationPre := []string{"1_day", "1_hour", "1_minute", "1_round", "10_days", "10_minutes", "24_hours", "30_days", "7_days", "8_hours", "Concentration", "Instantaneous", "Instantanous", "Special", "Until_dispelled", "Up_to_1_minute", "Up_to_1_hour", "Up_to_8_hours"}
 
@@ -62,7 +62,7 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			if err != nil {
 				log.Printf("Something went wrong with level conversion")
 			}
-			queryData.Level = temp
+			queryData.Level = temp + 1
 		}
 
 		if r.URL.Query().Get("school") != "" {
@@ -73,12 +73,15 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			queryData.School = temp
 		}
 
-		if r.URL.Query().Get("isRitual") != "" {
-			queryData.IsRitual = true
+		if r.URL.Query().Get("isRitual") == "t" {
+			queryData.IsRitual = "1"
+		} else if r.URL.Query().Get("isRitual") == "f" {
+			queryData.IsRitual = "0"
 		} else {
-			queryData.IsRitual = false
+			queryData.IsRitual = "%"
 		}
 
+		queryData.CastingTime = "%"
 		if r.URL.Query().Get("castingTime") != "" {
 			temp := r.URL.Query().Get("castingTime")
 			for _, v := range castingTimesPre {
@@ -88,29 +91,65 @@ func SearchLists(router *mux.Router, db *sql.DB) {
 			}
 		}
 
-		if r.URL.Query().Get("rangeValueStart") != "" {
-			temp, err := strconv.Atoi(r.URL.Query().Get("rangeValueStart"))
+		// Different values for feet and miles and specials
+		// rvsf = range value start feet
+		// rvef = range value end feet
+		// rvsm = range value start miles
+		// rvem = range value end miles
+		// rs = range specials
+		//
+		// Every value is int
+		// min 0 max 5000
+		// For rs is like binary
+		// 1 = Self
+		// 2 = Sight
+		// 4 = Special
+		// 8 = Touch
+		// 16 = Unlimited
+		// So 31 is like % and is a max value
+		// 0 means none of the specials
+		//
+
+		queryData.RVSF = 0
+		if r.URL.Query().Get("rvsf") != "" {
+			temp, err := strconv.Atoi(r.URL.Query().Get("rvsf"))
 			if err != nil {
-				log.Printf("Something went wrong with rangeValueStart conversion")
+				log.Printf("Something went wrong with rvsf conversion")
 			}
-			queryData.RangeValueStart = temp
+			queryData.RVSF = temp
 		}
 
-		if r.URL.Query().Get("rangeValueStop") != "" {
-			temp, err := strconv.Atoi(r.URL.Query().Get("rangeValueStop"))
+		queryData.RVEF = 5000
+		if r.URL.Query().Get("rvef") != "" {
+			temp, err := strconv.Atoi(r.URL.Query().Get("rvef"))
 			if err != nil {
-				log.Printf("Something went wrong with rangeValueStop conversion")
+				log.Printf("Something went wrong with rvef conversion")
 			}
-			queryData.RangeValueStop = temp
+			queryData.RVEF = temp
 		}
 
-		if r.URL.Query().Get("rangeType") != "" {
-			temp := r.URL.Query().Get("rangeType")
-			for _, v := range rangeTypePre {
-				if v == temp {
-					queryData.RangeType = v
-				}
+		queryData.RVSM = 0
+		if r.URL.Query().Get("rvsm") != "" {
+			temp, err := strconv.Atoi(r.URL.Query().Get("rvsm"))
+			if err != nil {
+				log.Printf("Something went wrong with rvsm conversion")
 			}
+			queryData.RVSM = temp
+		}
+
+		queryData.RVEM = 5000
+		if r.URL.Query().Get("rvem") != "" {
+			temp, err := strconv.Atoi(r.URL.Query().Get("rvem"))
+			if err != nil {
+				log.Printf("Something went wrong with rvem conversion")
+			}
+			queryData.RVEM = temp
+		}
+
+		if r.URL.Query().Get("rs") != "" {
+			queryData.RS = r.URL.Query().Get("rs")
+		} else {
+			queryData.RS = "11111"
 		}
 
 		if r.URL.Query().Get("components") != "" {
